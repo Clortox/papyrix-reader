@@ -301,6 +301,7 @@ freshrss::SyncOutcome runSync() {
   request.nowEpoch = now;
   request.sinceEpoch = state.persisted.sinceEpoch;
   request.feedOffset = state.persisted.feedCursor;
+  request.knownFeedCount = state.persisted.feedCount;
   state.lastFeedStart = state.persisted.feedCursor;
   request.markReadIds = state.persisted.pendingCount > 0 ? ids : nullptr;
   request.markReadCount = state.persisted.pendingCount;
@@ -374,6 +375,7 @@ void finishSync() {
     // feed has been visited, so later feeds still see the older bound.
     if (outcome.coveredAllFeeds) state.persisted.sinceEpoch = state.lastSyncEpoch;
     state.persisted.feedCursor = outcome.nextFeedOffset;
+    state.persisted.feedCount = outcome.stats.feedsSubscribed;
     saveState(state.persisted);
     refreshFeeds();
     if (outcome.stats.articlesStored == 0 && outcome.stats.markedRead == 0) {

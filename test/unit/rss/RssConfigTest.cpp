@@ -116,6 +116,27 @@ int main() {
     runner.expectTrue(config.includeRead, "config: includeRead decoded");
     runner.expectTrue(config.hasFeedFilter(), "config: feed filter present");
     runner.expectTrue(feedAllowed(config, "feed/13", "Hacker News"), "filter: numeric id matches");
+    {
+      // Category selection: only the named categories are synced.
+      char error[96] = {};
+      Config byCategory;
+      const std::string text = R"({"server":"https://h/api/greader.php","user":"u","apiPassword":"p",
+                                   "categories":"Blogs, Biomedical Research"})";
+      runner.expectTrue(parseConfigJson(text.data(), text.size(), byCategory, error, sizeof(error)),
+                        "categories: config parses");
+      runner.expectTrue(byCategory.hasCategoryFilter(), "categories: filter recorded");
+      runner.expectTrue(feedAllowed(byCategory, "feed/1", "A", "Blogs"), "categories: exact label matches");
+      runner.expectTrue(feedAllowed(byCategory, "feed/2", "B", "Blogs|Tech"), "categories: label among several");
+      runner.expectTrue(feedAllowed(byCategory, "feed/3", "C", "biomedical research"),
+                        "categories: match ignores case");
+      runner.expectFalse(feedAllowed(byCategory, "feed/4", "D", "Politics"), "categories: other label excluded");
+      runner.expectFalse(feedAllowed(byCategory, "feed/5", "E", nullptr), "categories: uncategorized excluded");
+      runner.expectFalse(feedAllowed(byCategory, "feed/6", "F", "Blogs Extra"), "categories: label must match whole");
+      byCategory.categoryFilter[0] = '\0';
+      std::snprintf(byCategory.categoryFilter, sizeof(byCategory.categoryFilter), "Uncategorized");
+      runner.expectTrue(feedAllowed(byCategory, "feed/7", "G", nullptr), "categories: uncategorized spelled out");
+      runner.expectFalse(feedAllowed(byCategory, "feed/8", "H", "Blogs"), "categories: catalogued feed excluded");
+    }
     runner.expectTrue(feedAllowed(config, "feed/9", "ars technica"), "filter: title matches case-insensitively");
     runner.expectFalse(feedAllowed(config, "feed/9", "Other"), "filter: unrelated feed excluded");
   }

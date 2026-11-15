@@ -402,6 +402,24 @@ int main() {
     runner.expectTrue(fixture.transport.connectLog.size() >= 2, "reconnect: connection re-established");
   }
 
+  // --- category selection ---------------------------------------------------
+  {
+    // Only the feed in the chosen category is requested; the other one is
+    // skipped entirely, so a large subscription list costs nothing extra.
+    Fixture fixture;
+    std::snprintf(fixture.config.categoryFilter, sizeof(fixture.config.categoryFilter), "Tech");
+    fixture.transport.queue(freshrss_test::loginResponse());
+    fixture.transport.queue(freshrss_test::httpResponse(200, freshrss_test::subscriptionsBody()));
+    fixture.transport.queue(freshrss_test::httpResponse(200, itemContent("tag:c/1", "Kept", "<p>b</p>")));
+    const SyncOutcome outcome = fixture.run();
+    runner.expectTrue(outcome.ok(), "categories: sync completes");
+    runner.expectEq<uint16_t>(1, outcome.stats.feedsChecked, "categories: only the chosen category synced");
+    runner.expectTrue(fixture.transport.requests.find("stream/contents/feed/12") != std::string::npos,
+                      "categories: labelled feed requested");
+    runner.expectTrue(fixture.transport.requests.find("stream/contents/feed/13") == std::string::npos,
+                      "categories: unlabelled feed skipped");
+  }
+
   // --- favorites ------------------------------------------------------------
   {
     Fixture fixture;

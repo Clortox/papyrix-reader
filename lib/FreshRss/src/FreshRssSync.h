@@ -23,10 +23,13 @@ namespace freshrss {
 struct Feed {
   char id[64] = {};  // "feed/12"
   char title[64] = {};
+  char categories[96] = {};  // FreshRSS category labels, joined with '|'
 };
 
 struct FeedList {
-  static constexpr size_t kMaxFeeds = 16;
+  // Holds every feed maxFeeds can visit; the list is a session member, not a
+  // stack object, and this used to truncate a larger subscription list.
+  static constexpr size_t kMaxFeeds = 64;
   Feed feeds[kMaxFeeds];
   size_t count = 0;
 };
@@ -61,8 +64,11 @@ class SubscriptionCollector {
   int depth_ = 0;
   int subscriptionsDepth_ = -1;
   int feedDepth_ = -1;
+  // Depth of the feed's `categories` array, so its labels can be captured.
+  int categoriesDepth_ = -1;
   bool pendingSubscriptionsKey_ = false;
-  enum class Field : uint8_t { None, Id, Title } field_ = Field::None;
+  enum class Field : uint8_t { None, Id, Title, CategoryLabel } field_ = Field::None;
+  char lastFieldKey_[32] = {};
   Feed current_;
   bool failed_ = false;
   char error_[64] = {};
@@ -238,6 +244,10 @@ struct SyncRequest {
   // Subscription index this run starts at. Feeds beyond the per-run budget wait
   // for a later run, so a large subscription list is covered over several syncs.
   size_t feedOffset = 0;
+  // How many subscriptions the caller saw last time. When the server now reports
+  // more, those feeds have nothing on the card yet, so this run ignores the
+  // incremental window for them instead of only fetching brand-new items.
+  uint16_t knownFeedCount = 0;
 };
 
 // Streams one feed's items into article files. Owns the file currently being
@@ -292,6 +302,9 @@ class SyncSession {
   SyncOutcome run(const SyncRequest& request);
 
   const FeedList& feeds() const { return feeds_; }
+  // Logs in and reads the subscription list without downloading anything: the
+  // listing modes of the CLIs use it to show what could be synced.
+  bool fetchFeedList(SyncOutcome& outcome);
   const Endpoint& endpoint() const { return endpoint_; }
 
  private:

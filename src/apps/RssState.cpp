@@ -28,10 +28,11 @@ bool parseUnsigned(const char* text, size_t length, uint32_t& out) {
 
 size_t encodeState(const RssState& state, char* out, size_t capacity) {
   if (!out || capacity == 0) return 0;
-  int written = std::snprintf(out, capacity, "lastSync=%u\nsince=%u\ncursor=%u\n",
+  int written = std::snprintf(out, capacity, "lastSync=%u\nsince=%u\ncursor=%u\nfeeds=%u\n",
                               static_cast<unsigned>(state.lastSyncEpoch),
                               static_cast<unsigned>(state.sinceEpoch),
-                              static_cast<unsigned>(state.feedCursor));
+                              static_cast<unsigned>(state.feedCursor),
+                              static_cast<unsigned>(state.feedCount));
   if (written <= 0 || static_cast<size_t>(written) >= capacity) {
     out[0] = '\0';
     return 0;
@@ -68,6 +69,9 @@ bool decodeState(const char* text, size_t length, RssState& out) {
     } else if (lineLength > 7 && std::strncmp(line, "cursor=", 7) == 0) {
       uint32_t cursor = 0;
       if (parseUnsigned(line + 7, lineLength - 7, cursor)) out.feedCursor = cursor;
+    } else if (lineLength > 6 && std::strncmp(line, "feeds=", 6) == 0) {
+      uint32_t count = 0;
+      if (parseUnsigned(line + 6, lineLength - 6, count) && count <= 65535) out.feedCount = static_cast<uint16_t>(count);
     } else if (lineLength > 8 && std::strncmp(line, "pending=", 8) == 0) {
       char id[kMaxItemIdLength + 1];
       copyBounded(id, sizeof(id), line + 8, lineLength - 8);

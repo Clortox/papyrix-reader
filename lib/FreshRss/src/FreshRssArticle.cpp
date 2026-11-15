@@ -176,6 +176,40 @@ uint64_t hashItemId(const char* id) {
   return hash;
 }
 
+namespace {
+
+// Length of the UTF-8 sequence starting at `c`, or 0 when it is not valid.
+size_t utf8SequenceLength(const unsigned char* p, const unsigned char* end) {
+  const unsigned char first = *p;
+  size_t length = 0;
+  uint32_t value = 0;
+  if (first < 0x80) return 1;
+  if (first >= 0xC2 && first <= 0xDF) {
+    length = 2;
+    value = first & 0x1F;
+  } else if (first >= 0xE0 && first <= 0xEF) {
+    length = 3;
+    value = first & 0x0F;
+  } else if (first >= 0xF0 && first <= 0xF4) {
+    length = 4;
+    value = first & 0x07;
+  } else {
+    return 0;
+  }
+  if (p + length > end) return 0;
+  for (size_t i = 1; i < length; ++i) {
+    if ((p[i] & 0xC0) != 0x80) return 0;
+    value = (value << 6) | (p[i] & 0x3F);
+  }
+  // Reject overlongs, surrogates and out-of-range code points.
+  if (length == 3 && ((first == 0xE0 && p[1] < 0xA0) || (first == 0xED && p[1] >= 0xA0))) return 0;
+  if (length == 4 && ((first == 0xF0 && p[1] < 0x90) || (first == 0xF4 && p[1] >= 0x90))) return 0;
+  (void)value;
+  return length;
+}
+
+}  // namespace
+
 size_t sanitizeFileComponent(char* out, size_t capacity, const char* text, const char* fallback) {
   if (!out || capacity < 2) return 0;
   size_t written = 0;
@@ -183,10 +217,30 @@ size_t sanitizeFileComponent(char* out, size_t capacity, const char* text, const
   // a dot (hidden) or a dash.
   bool lastWasSeparator = true;
   if (text) {
-    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(text); *p && written + 1 < capacity; ++p) {
+    const auto* bytes = reinterpret_cast<const unsigned char*>(text);
+    const auto* end = bytes + std::strlen(text);
+    for (const unsigned char* p = bytes; p < end && written + 1 < capacity;) {
       const unsigned char c = *p;
-      const bool safe = c >= 0x80 || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
-                        c == '_' || (c == '.' && !lastWasSeparator);
+      if (c >= 0x80) {
+        // Multi-byte sequences are kept only when they are valid UTF-8: a card
+        // mounted with a utf8 charset refuses to create any other name.
+        const size_t length = utf8SequenceLength(p, end);
+        if (length == 0 || written + length >= capacity) {
+          if (!lastWasSeparator) {
+            out[written++] = '-';
+            lastWasSeparator = true;
+          }
+          ++p;
+          continue;
+        }
+        for (size_t i = 0; i < length; ++i) out[written++] = static_cast<char>(p[i]);
+        p += length;
+        lastWasSeparator = false;
+        continue;
+      }
+      ++p;
+      const bool safe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' ||
+                        (c == '.' && !lastWasSeparator);
       if (safe) {
         out[written++] = static_cast<char>(c);
         lastWasSeparator = false;

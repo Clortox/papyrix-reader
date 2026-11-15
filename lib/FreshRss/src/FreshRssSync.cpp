@@ -53,6 +53,23 @@ size_t pathEncodeAppend(char* out, size_t capacity, size_t written, const char* 
 }  // namespace
 
 void SubscriptionCollector::assignString() {
+  if (field_ == Field::CategoryLabel) {
+    if (categoriesDepth_ < 0 || depth_ != categoriesDepth_ + 1) return;
+    // Labels are joined so one feed can belong to several categories.
+    if (current_.categories[0] != '\0') {
+      const size_t length = std::strlen(current_.categories);
+      if (length + 1 < sizeof(current_.categories)) {
+        current_.categories[length] = '|';
+        current_.categories[length + 1] = '\0';
+      }
+    }
+    const size_t length = std::strlen(current_.categories);
+    const size_t room = sizeof(current_.categories) - 1 - length;
+    const size_t count = scanner_.length() < room ? scanner_.length() : room;
+    if (count > 0) std::memcpy(current_.categories + length, scanner_.text(), count);
+    current_.categories[length + count] = '\0';
+    return;
+  }
   if (feedDepth_ < 0 || depth_ != feedDepth_) return;
   switch (field_) {
     case Field::Id:
@@ -62,6 +79,7 @@ void SubscriptionCollector::assignString() {
       copyBounded(current_.title, sizeof(current_.title), scanner_.text(), scanner_.length());
       decodeBasicEntities(current_.title);
       break;
+
     default:
       break;
   }
@@ -93,10 +111,13 @@ void SubscriptionCollector::handle(const JsonScanner::Token& token) {
       if (pendingSubscriptionsKey_) {
         subscriptionsDepth_ = depth_;
         pendingSubscriptionsKey_ = false;
+      } else if (feedDepth_ >= 0 && depth_ == feedDepth_ + 1 && equalsIgnoreCase(lastFieldKey_, "categories")) {
+        categoriesDepth_ = depth_;
       }
       break;
     case Token::ArrayEnd:
       if (subscriptionsDepth_ >= 0 && depth_ == subscriptionsDepth_) subscriptionsDepth_ = -1;
+      if (categoriesDepth_ >= 0 && depth_ == categoriesDepth_) categoriesDepth_ = -1;
       if (depth_ > 0) --depth_;
       break;
     case Token::Key:
@@ -106,7 +127,10 @@ void SubscriptionCollector::handle(const JsonScanner::Token& token) {
           field_ = Field::Id;
         else if (equalsIgnoreCase(scanner_.text(), "title"))
           field_ = Field::Title;
+      } else if (categoriesDepth_ >= 0 && depth_ == categoriesDepth_ + 1 && equalsIgnoreCase(scanner_.text(), "label")) {
+        field_ = Field::CategoryLabel;
       }
+      copyBounded(lastFieldKey_, sizeof(lastFieldKey_), scanner_.text(), scanner_.length());
       pendingSubscriptionsKey_ = equalsIgnoreCase(scanner_.text(), "subscriptions");
       break;
     case Token::StringEnd:
@@ -595,6 +619,20 @@ bool SyncSession::login(SyncOutcome& outcome) {
   return true;
 }
 
+bool SyncSession::fetchFeedList(SyncOutcome& outcome) {
+  stats_ = SyncStats{};
+  feeds_.count = 0;
+  auth_[0] = '\0';
+  if (!ensureConnected(outcome) || !login(outcome) || !fetchSubscriptions(outcome)) {
+    outcome.stats = stats_;
+    return false;
+  }
+  outcome.status = SyncStatus::Ok;
+  outcome.stats = stats_;
+  freshrss::copyBounded(outcome.message, sizeof(outcome.message), "listed");
+  return true;
+}
+
 bool SyncSession::fetchSubscriptions(SyncOutcome& outcome) {
   report(SyncStage::Feeds, 0, 0, "");
   size_t written = appendLiteral(query_, sizeof(query_), 0, "output=json&ck=");
@@ -876,6 +914,11 @@ SyncOutcome SyncSession::run(const SyncRequest& request) {
   }
 
   stats_.feedsSubscribed = static_cast<uint16_t>(feeds_.count < UINT16_MAX ? feeds_.count : UINT16_MAX);
+  // Subscriptions that were not there last time have nothing stored here yet.
+  SyncRequest effective = request;
+  if (request.knownFeedCount != 0 && feeds_.count > request.knownFeedCount) {
+    effective.sinceEpoch = 0;
+  }
 
   // A run visits at most maxFeeds feeds, starting at the caller's cursor and
   // wrapping around, so a long subscription list is covered over several syncs.
@@ -884,7 +927,7 @@ SyncOutcome SyncSession::run(const SyncRequest& request) {
   for (; steps < feeds_.count && checked < config_.maxFeeds; ++steps) {
     const size_t index = (static_cast<size_t>(request.feedOffset) + steps) % feeds_.count;
     const Feed& feed = feeds_.feeds[index];
-    if (!feedAllowed(config_, feed.id, feed.title)) continue;
+    if (!feedAllowed(config_, feed.id, feed.title, feed.categories)) continue;
     ++checked;
     report(SyncStage::Articles, index, feeds_.count, feed.title);
     if (aborted_) {
@@ -892,7 +935,7 @@ SyncOutcome SyncSession::run(const SyncRequest& request) {
       outcome.stats = stats_;
       return outcome;
     }
-    if (!fetchFeed(feed, index, feeds_.count, request, outcome)) {
+    if (!fetchFeed(feed, index, feeds_.count, effective, outcome)) {
       outcome.stats = stats_;
       return outcome;
     }

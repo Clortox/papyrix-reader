@@ -305,6 +305,8 @@ class Parser {
     if (std::strcmp(key, "caCert") == 0) return requiredString(key, out.caCert, sizeof(out.caCert));
     if (std::strcmp(key, "folder") == 0) return requiredString(key, out.folder, sizeof(out.folder));
     if (std::strcmp(key, "feeds") == 0) return requiredString(key, out.feedFilter, sizeof(out.feedFilter));
+    if (std::strcmp(key, "categories") == 0)
+      return requiredString(key, out.categoryFilter, sizeof(out.categoryFilter));
     if (std::strcmp(key, "articlesPerFeed") == 0) {
       if (!requiredNumber(key, number)) return false;
       out.articlesPerFeed = clampU16(number, kMinArticlesPerFeed, kMaxArticlesPerFeed);
@@ -466,6 +468,7 @@ void normalizeConfig(Config& config) {
   trimInPlace(config.caCert);
   trimInPlace(config.folder);
   trimInPlace(config.feedFilter);
+  trimInPlace(config.categoryFilter);
 
   size_t length = std::strlen(config.server);
   while (length > 0 && config.server[length - 1] == '/') config.server[--length] = '\0';
@@ -556,16 +559,65 @@ bool entryMatches(const char* entry, size_t entryLength, const char* feedId, con
 
 }  // namespace
 
-bool feedAllowed(const Config& config, const char* feedId, const char* feedTitle) {
-  if (!config.hasFeedFilter()) return true;
-  const char* cursor = config.feedFilter;
+namespace {
+
+// True when one '|'-separated label matches the filter entry exactly.
+bool labelMatches(const char* entry, size_t entryLength, const char* labels) {
+  if (!labels) return false;
+  const char* cursor = labels;
+  while (*cursor) {
+    const char* start = cursor;
+    while (*cursor && *cursor != '|') ++cursor;
+    size_t length = static_cast<size_t>(cursor - start);
+    if (length == entryLength) {
+      bool same = true;
+      for (size_t i = 0; i < length; ++i) {
+        if (std::tolower(static_cast<unsigned char>(start[i])) != std::tolower(static_cast<unsigned char>(entry[i]))) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return true;
+    }
+    if (*cursor == '|') ++cursor;
+  }
+  return false;
+}
+
+}  // namespace
+
+bool feedAllowed(const Config& config, const char* feedId, const char* feedTitle, const char* feedCategories) {
+  if (config.hasFeedFilter()) {
+    bool allowed = false;
+    const char* cursor = config.feedFilter;
+    while (*cursor) {
+      while (*cursor == ' ' || *cursor == ',') ++cursor;
+      const char* start = cursor;
+      while (*cursor && *cursor != ',') ++cursor;
+      size_t length = static_cast<size_t>(cursor - start);
+      while (length > 0 && (start[length - 1] == ' ' || start[length - 1] == '\t')) --length;
+      if (entryMatches(start, length, feedId, feedTitle)) {
+        allowed = true;
+        break;
+      }
+      if (*cursor == ',') ++cursor;
+    }
+    if (!allowed) return false;
+  }
+
+  if (!config.hasCategoryFilter()) return true;
+  const bool uncategorized = !feedCategories || feedCategories[0] == '\0';
+  const char* cursor = config.categoryFilter;
   while (*cursor) {
     while (*cursor == ' ' || *cursor == ',') ++cursor;
     const char* start = cursor;
     while (*cursor && *cursor != ',') ++cursor;
     size_t length = static_cast<size_t>(cursor - start);
     while (length > 0 && (start[length - 1] == ' ' || start[length - 1] == '\t')) --length;
-    if (entryMatches(start, length, feedId, feedTitle)) return true;
+    if (length > 0) {
+      if (uncategorized && length == 13 && strncasecmp(start, "Uncategorized", 13) == 0) return true;
+      if (labelMatches(start, length, feedCategories)) return true;
+    }
     if (*cursor == ',') ++cursor;
   }
   return false;
@@ -592,7 +644,8 @@ size_t writeExampleConfig(char* out, size_t capacity) {
       "  \"maxArticleBytes\": 98304,\n"
       "  \"markReadOnOpen\": true,\n"
       "  \"includeRead\": false,\n"
-      "  \"feeds\": \"\"\n"
+      "  \"feeds\": \"\",\n"
+      "  \"categories\": \"\"\n"
       "}\n";
   const size_t length = std::strlen(text);
   const size_t count = length < capacity - 1 ? length : capacity - 1;

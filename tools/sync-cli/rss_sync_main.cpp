@@ -5,6 +5,7 @@
 
 #include <RssState.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -27,6 +28,8 @@ void usage() {
       "  --root <dir>     card or directory to write into (required)\n"
       "  --config <file>  defaults to <root>/rss.json\n"
       "  --limit <n>      articles per feed for this run\n"
+      "  --backfill       ignore the incremental window and refetch from scratch\n"
+      "  --list-categories  show the FreshRSS categories and their feeds, then exit\n"
       "  --dry-run        report what would be written, change nothing\n"
       "  --verbose        list every article as it is stored\n"
       "  --help           this text\n"
@@ -167,6 +170,66 @@ int main(int argc, char** argv) {
   syncli::FsArticleStore store(root);
   store.setDryRun(dryRun);
 
+  if (syncli::hasOption(args, "--list-categories")) {
+    // Show what could be synced so a category filter can be written into the
+    // config: name, feed count, and whether the current filter keeps it.
+    auto session = std::make_unique<freshrss::SyncSession>(transport, store, config, endpoint);
+    freshrss::SyncOutcome listing;
+    if (!session->fetchFeedList(listing)) {
+      std::fprintf(stderr, "error: %s%s%s\n", freshrss::describeSyncStatus(listing.status),
+                   listing.message[0] ? ": " : "", listing.message);
+      return 1;
+    }
+    const freshrss::FeedList& feeds = session->feeds();
+    std::printf("%zu subscriptions:", feeds.count);
+    std::printf("\n\n");
+    // Group feeds by their first category label; a feed in several categories is
+    // listed under each one.
+    std::vector<std::string> seen;
+    for (size_t i = 0; i < feeds.count; ++i) {
+      std::string labels(feeds.feeds[i].categories);
+      if (labels.empty()) labels = "Uncategorized";
+      size_t start = 0;
+      while (start <= labels.size()) {
+        const size_t bar = labels.find('|', start);
+        const std::string label = labels.substr(start, bar == std::string::npos ? std::string::npos : bar - start);
+        start = bar == std::string::npos ? labels.size() + 1 : bar + 1;
+        if (label.empty()) continue;
+        if (std::find(seen.begin(), seen.end(), label) == seen.end()) seen.push_back(label);
+      }
+    }
+    std::sort(seen.begin(), seen.end());
+    for (const std::string& label : seen) {
+      size_t total = 0;
+      size_t kept = 0;
+      std::string examples;
+      for (size_t i = 0; i < feeds.count; ++i) {
+        std::string labels(feeds.feeds[i].categories);
+        if (labels.empty()) labels = "Uncategorized";
+        // Whole-label match, the same rule the filter uses.
+        bool member = false;
+        size_t start = 0;
+        while (start <= labels.size()) {
+          const size_t bar = labels.find('|', start);
+          const std::string piece = labels.substr(start, bar == std::string::npos ? std::string::npos : bar - start);
+          start = bar == std::string::npos ? labels.size() + 1 : bar + 1;
+          if (piece == label) {
+            member = true;
+            break;
+          }
+        }
+        if (!member) continue;
+        ++total;
+        if (freshrss::feedAllowed(config, feeds.feeds[i].id, feeds.feeds[i].title, feeds.feeds[i].categories)) ++kept;
+        if (examples.size() < 60) examples += (examples.empty() ? "" : ", ") + std::string(feeds.feeds[i].title);
+      }
+      std::printf("  %-38.38s %2zu feeds%s   %s\n", label.c_str(), total,
+                  kept == total ? "" : (kept == 0 ? "  (filtered out)" : "  (partly filtered)"), examples.c_str());
+    }
+    std::printf("\nSet \"categories\" in %s to a comma-separated list of these names.\n", path.c_str());
+    return 0;
+  }
+
   freshrss::SyncSession session(transport, store, config, endpoint);
   Printer printer;
   printer.verbose = verbose;
@@ -178,7 +241,11 @@ int main(int argc, char** argv) {
 
   freshrss::SyncRequest request;
   request.nowEpoch = syncli::nowEpoch();
+  // Feeds that appear for the first time must be filled from scratch: the window
+  // is meaningless for them, and the name-based dedupe keeps it cheap.
   request.sinceEpoch = state.sinceEpoch;
+  request.knownFeedCount = state.feedCount;
+  if (syncli::hasOption(args, "--backfill")) request.sinceEpoch = 0;
   request.feedOffset = state.feedCursor;
   request.markReadIds = state.pendingCount > 0 ? ids : nullptr;
   request.markReadCount = state.pendingCount;
@@ -207,6 +274,7 @@ int main(int argc, char** argv) {
     state.lastSyncEpoch = request.nowEpoch;
     if (outcome.coveredAllFeeds) state.sinceEpoch = request.nowEpoch;
     state.feedCursor = outcome.nextFeedOffset;
+    state.feedCount = outcome.stats.feedsSubscribed;
     char encoded[papyrix::rss_app::kMaxStateBytes];
     const size_t length = papyrix::rss_app::encodeState(state, encoded, sizeof(encoded));
     std::string writeError;

@@ -17,6 +17,7 @@ constexpr size_t kMaxSecret = 95;  // FreshRSS API passwords are short; this is 
 constexpr size_t kMaxCaPath = 95;  // SD path to a PEM bundle
 constexpr size_t kMaxFolder = 95;  // visible library folder that holds articles
 constexpr size_t kMaxFeedFilter = 255;
+constexpr size_t kMaxCategoryFilter = 255;
 
 // Bounds for numeric keys. A malformed or hostile file cannot make the sync
 // loop unbounded.
@@ -40,6 +41,11 @@ struct Config {
   char caCert[kMaxCaPath + 1] = {0};  // optional: SD path to a PEM to validate against
   char folder[kMaxFolder + 1] = "/RSS";
   char feedFilter[kMaxFeedFilter + 1] = {0};  // optional comma-separated feed ids/titles
+  // Optional comma-separated FreshRSS category names. Only feeds in those
+  // categories are synced, which is how a large subscription list is narrowed to
+  // what is worth reading on the device. "Uncategorized" matches feeds that have
+  // no category at all; empty means every category.
+  char categoryFilter[kMaxCategoryFilter + 1] = {0};
 
   uint16_t articlesPerFeed = 15;
   uint8_t maxFeeds = 8;
@@ -57,6 +63,7 @@ struct Config {
   bool includeRead = false;
 
   bool hasFeedFilter() const { return feedFilter[0] != '\0'; }
+  bool hasCategoryFilter() const { return categoryFilter[0] != '\0'; }
 };
 
 // Parsed server URL. Requests are sent to basePath + apiPath on host:port.
@@ -87,7 +94,8 @@ bool validateConfig(const Config& config, char* error, size_t errorSize);
 bool syncDue(uint32_t lastSyncEpoch, uint32_t nowEpoch, const Config& config, bool neverSynced);
 
 // True when a feed id ("feed/12") or title matches the optional filter list.
-bool feedAllowed(const Config& config, const char* feedId, const char* feedTitle);
+bool feedAllowed(const Config& config, const char* feedId, const char* feedTitle,
+                 const char* feedCategories = nullptr);
 
 // Appends a JSON key/value pair to `out`. Used to write the annotated example
 // file when no config exists yet.

@@ -25,6 +25,9 @@ struct RssState {
   // Subscription index the next sync starts at: feeds beyond the per-run budget
   // are picked up by later runs.
   uint32_t feedCursor = 0;
+  // Subscriptions seen last time. A larger number now means feeds were added, so
+  // the next run fetches them from scratch rather than from the window.
+  uint16_t feedCount = 0;
   // Items opened locally since the last sync; uploaded when the network allows.
   char pending[kMaxPendingItems][kMaxItemIdLength + 1] = {};
   size_t pendingCount = 0;
