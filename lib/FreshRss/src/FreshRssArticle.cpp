@@ -327,7 +327,7 @@ bool extractItemId(const char* documentHead, size_t length, char* out, size_t ca
 
 bool ArticleWriter::emit(const char* data, size_t length) {
   if (!active_ || length == 0) return true;
-  if (maxBytes_ > 0 && written_ + length > maxBytes_) {
+  if (maxBytes_ > 0 && written_ + length > maxBytes_ && !writingFooter_) {
     overflowed_ = true;
     return false;
   }
@@ -700,9 +700,13 @@ bool ArticleWriter::end() {
   if (state_ == State::Suppressed || state_ == State::SuppressedTag) {
     emitLiteral("\n");
   }
+  writingFooter_ = true;
   const bool ok = emitLiteral("\n<hr/>\n</body></html>\n");
+  writingFooter_ = false;
   active_ = false;
-  return ok && !overflowed_;
+  // A truncated article is still a readable one: the closing markup is in place
+  // and overflowed() reports that the tail was dropped.
+  return ok;
 }
 
 }  // namespace freshrss

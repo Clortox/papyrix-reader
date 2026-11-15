@@ -467,13 +467,24 @@ bool ArticleDownloader::contentChunk(const char* data, size_t length) {
 
 void ArticleDownloader::endItem(const ItemInfo& info, bool complete) {
   if (!open_) {
-    if (!skipped_ && !fatal_) stats_.articlesFailed++;
+    // Nothing to store (the feed carried a headline with no body).
+    if (!skipped_ && !fatal_) stats_.articlesSkipped++;
+    current_ = nullptr;
+    return;
+  }
+  if (!complete) {
+    // The item announced a body but it arrived empty: nothing worth storing, and
+    // not a failure either.
+    file_->discard();
+    stats_.articlesSkipped++;
+    file_ = nullptr;
+    open_ = false;
     current_ = nullptr;
     return;
   }
   const bool authorArrivedLate = info.author[0] != '\0' && std::strcmp(info.author, authorAtBegin_) != 0;
   if (authorArrivedLate) writer_.writeAuthorLine(info.author);
-  const bool stored = complete && writer_.end();
+  const bool stored = writer_.end();
   if (!stored || !file_->commit()) {
     file_->discard();
     stats_.articlesFailed++;

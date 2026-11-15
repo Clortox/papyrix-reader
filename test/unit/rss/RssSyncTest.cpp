@@ -336,7 +336,9 @@ int main() {
     const SyncOutcome outcome = fixture.run();
     runner.expectTrue(outcome.ok(), "failure: bodyless items are tolerated");
     runner.expectEq<uint16_t>(0, outcome.stats.articlesStored, "failure: nothing stored");
-    runner.expectEq<uint16_t>(2, outcome.stats.articlesFailed, "failure: bodyless items counted as failed");
+    // A headline with no body is nothing to store, not a failure.
+    runner.expectEq<uint16_t>(0, outcome.stats.articlesFailed, "failure: bodyless items are not failures");
+    runner.expectEq<uint16_t>(2, outcome.stats.articlesSkipped, "failure: bodyless items counted as skipped");
     runner.expectEq<size_t>(0, fixture.store.created.size(), "failure: no empty file created");
   }
   {

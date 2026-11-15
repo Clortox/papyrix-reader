@@ -90,6 +90,8 @@ class ArticleWriter {
   size_t written_ = 0;
   bool overflowed_ = false;
   bool active_ = false;
+  // Set while the closing markup is written: it is never what overflows.
+  bool writingFooter_ = false;
 
   State state_ = State::Idle;
   char tag_[200] = {};

@@ -235,8 +235,11 @@ int main() {
     const bool ok = writer.writeContent(body.data(), body.size());
     runner.expectFalse(ok, "limit: oversized body refused");
     runner.expectTrue(writer.overflowed(), "limit: overflow flagged");
-    runner.expectFalse(writer.end(), "limit: end reports failure after overflow");
-    runner.expectTrue(sink.content.size() <= 200, "limit: sink never exceeds the budget");
+    // The closing markup is always written, so a truncated article is still a
+    // readable document rather than a discarded one.
+    runner.expectTrue(writer.end(), "limit: document is closed after overflow");
+    runner.expectTrue(contains(sink.content, "</body></html>"), "limit: closing markup present");
+    runner.expectTrue(sink.content.size() <= 200 + 40, "limit: only the footer exceeds the budget");
   }
   {
     StringSink sink;

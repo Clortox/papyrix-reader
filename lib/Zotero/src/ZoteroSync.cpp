@@ -97,10 +97,9 @@ const char* describeStatus(Status status) {
 
 size_t encodeState(const State& state, char* out, size_t capacity) {
   if (!out || capacity == 0) return 0;
-  const int written = std::snprintf(out, capacity, "lastSync=%u\nversion=%u\nstart=%u\n",
-                                    static_cast<unsigned>(state.lastSyncEpoch),
-                                    static_cast<unsigned>(state.libraryVersion),
-                                    static_cast<unsigned>(state.nextStart));
+  const int written =
+      std::snprintf(out, capacity, "lastSync=%u\nversion=%u\nstart=%u\n", static_cast<unsigned>(state.lastSyncEpoch),
+                    static_cast<unsigned>(state.libraryVersion), static_cast<unsigned>(state.nextStart));
   if (written <= 0 || static_cast<size_t>(written) >= capacity) {
     out[0] = '\0';
     return 0;
@@ -297,8 +296,7 @@ bool Session::fetchItems(const Request& request, Outcome& outcome) {
     std::snprintf(path, sizeof(path), "/%s/items/top", config_.library);
   }
 
-  size_t written = std::snprintf(query_, sizeof(query_),
-                                 "format=json&limit=%u&sort=dateAdded&direction=desc&v=3",
+  size_t written = std::snprintf(query_, sizeof(query_), "format=json&limit=%u&sort=dateAdded&direction=desc&v=3",
                                  static_cast<unsigned>(config_.itemsLimit));
   if (written <= 0 || static_cast<size_t>(written) >= sizeof(query_)) {
     outcome.status = Status::BadResponse;
