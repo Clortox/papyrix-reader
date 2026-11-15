@@ -44,6 +44,7 @@ The app reads `rss.json` from the root of the SD card. `/.papyrix/apps/rss.json`
 | `maxFeeds` | `8` | Feeds visited per sync (1–64). A longer subscription list is covered over successive syncs, continuing where the last one stopped. |
 | `syncIntervalMinutes` | `60` | How long a sync stays fresh (5–43200). |
 | `keepPerFeed` | `40` | Articles kept per feed. Older ones are deleted after a sync. |
+| `favoritesLimit` | `100` | Newest starred items downloaded on **every** sync into `<folder>/Favorites` (0–200; `0` disables the folder). |
 | `maxArticleBytes` | `98304` | Largest article file written (4 KB–512 KB). A larger article is skipped, not truncated. |
 | `markReadOnOpen` | `true` | Mark an article read on the server after you open it. |
 | `includeRead` | `false` | Off: mirror unread state and fetch only unread items. On: also fetch the newest items the server already reports as read, which builds a shelf of recent articles. |
@@ -57,9 +58,10 @@ After editing the file, use **Menu → Reload config** instead of rebooting.
 
 1. Signs in with the API password and reads the subscription list.
 2. For each feed, downloads items published since the last successful sync (`articlesPerFeed` at most). Unread items only, unless `includeRead` is set; an item whose file is already on the card is skipped either way.
-3. Writes one HTML file per item into `<folder>/<feed>/`, named `<date>-<title>-<hash>.html`. The name is derived from the item id, so a repeated download lands on the same file and is skipped instead of duplicated.
-4. Uploads the read markers queued by opening articles.
-5. Deletes the oldest articles beyond `keepPerFeed` for each feed.
+3. Downloads the newest starred items into `<folder>/Favorites`. This ignores read state and the incremental window, so an older article you star still arrives, and unstarring it upstream stops it being refreshed.
+4. Writes one HTML file per item into `<folder>/<feed>/`, named `<date>-<title>-<hash>.html`. The name is derived from the item id, so a repeated download lands on the same file and is skipped instead of duplicated.
+5. Uploads the read markers queued by opening articles.
+6. Deletes the oldest articles beyond `keepPerFeed` for each feed, and beyond `favoritesLimit` for favorites.
 
 Feeds rotate: a sync visits at most `maxFeeds` subscriptions and the next one starts where it left off, so a long list is covered over several syncs. The incremental window (items published since the last sync) only advances after a sync has swept the whole list; until then each run re-lists the same window and already-stored articles are skipped by name, so a feed that waits for a later run never misses anything. The menu shows the slice the last sync covered (`Feeds 17–32 of 33`). The optional `feeds` filter narrows the rotation to the feeds it allows.
 

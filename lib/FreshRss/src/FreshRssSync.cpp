@@ -683,6 +683,17 @@ bool SyncSession::fetchFeed(const Feed& feed, size_t index, size_t total, const 
   ArticleDownloader downloader(store_, config_, feed, hooks_, stats_);
   downloader.setDirectory(directory);
   downloader.setFallbackEpoch(request.nowEpoch);
+  if (!streamDownload(downloader, outcome)) return false;
+
+  stats_.feedsChecked++;
+  uint16_t removed = 0;
+  if (store_.pruneFeed(directory, config_.keepPerFeed, removed)) stats_.pruned += removed;
+  (void)index;
+  (void)total;
+  return true;
+}
+
+bool SyncSession::streamDownload(ArticleDownloader& downloader, SyncOutcome& outcome) {
   StreamCollector collector(downloader);
   char buffer[kBodyStreamBuffer];
   while (true) {
@@ -712,12 +723,55 @@ bool SyncSession::fetchFeed(const Feed& feed, size_t index, size_t total, const 
     copyBounded(outcome.message, sizeof(outcome.message), collector.error());
     return false;
   }
+  return true;
+}
 
-  stats_.feedsChecked++;
+bool SyncSession::fetchFavorites(const SyncRequest& request, SyncOutcome& outcome) {
+  if (config_.favoritesLimit == 0) return true;
+
+  char directory[160];
+  if (!store_.ensureFeedDirectory(config_.folder, kFavoritesFolderName, directory, sizeof(directory))) {
+    outcome.status = SyncStatus::OutOfSpace;
+    copyBounded(outcome.message, sizeof(outcome.message), "cannot create folder");
+    return false;
+  }
+
+  // Always the newest starred items: no read-state filter and no time window, so
+  // an old article starred recently still arrives, and unstarring it upstream
+  // simply stops it being refreshed.
+  size_t written = appendLiteral(query_, sizeof(query_), 0, "output=json&r=d&n=");
+  written = written ? appendUnsigned(query_, sizeof(query_), written, config_.favoritesLimit) : 0;
+  written = written ? appendLiteral(query_, sizeof(query_), written, "&ck=") : 0;
+  written = written ? appendUnsigned(query_, sizeof(query_), written, request.nowEpoch) : 0;
+  if (written == 0) {
+    outcome.status = SyncStatus::BadResponse;
+    copyBounded(outcome.message, sizeof(outcome.message), "request too long");
+    return false;
+  }
+
+  if (!send("GET", kFavoritesApiPath, query_, auth_, nullptr, 0, outcome)) return false;
+  if (!checkStatus(outcome, "favorites")) {
+    // A server without a starred stream must not fail the whole sync.
+    if (outcome.httpStatus == 400 || outcome.httpStatus == 404) {
+      stats_.articlesFailed++;
+      outcome.status = SyncStatus::Ok;
+      outcome.httpStatus = 0;
+      outcome.message[0] = '\0';
+      return true;
+    }
+    return false;
+  }
+
+  Feed favorites;
+  copyBounded(favorites.id, sizeof(favorites.id), "user/-/state/com.google/starred");
+  copyBounded(favorites.title, sizeof(favorites.title), kFavoritesFolderName);
+  ArticleDownloader downloader(store_, config_, favorites, hooks_, stats_);
+  downloader.setDirectory(directory);
+  downloader.setFallbackEpoch(request.nowEpoch);
+  if (!streamDownload(downloader, outcome)) return false;
+
   uint16_t removed = 0;
-  if (store_.pruneFeed(directory, config_.keepPerFeed, removed)) stats_.pruned += removed;
-  (void)index;
-  (void)total;
+  if (store_.pruneFeed(directory, config_.favoritesLimit, removed)) stats_.pruned += removed;
   return true;
 }
 
@@ -853,6 +907,21 @@ SyncOutcome SyncSession::run(const SyncRequest& request) {
   outcome.coveredAllFeeds = feeds_.count == 0 || steps >= feeds_.count || scanned > feeds_.count;
   outcome.nextFeedOffset =
       feeds_.count == 0 ? 0 : static_cast<uint32_t>((static_cast<size_t>(request.feedOffset) + steps) % feeds_.count);
+
+  // Favorites come last so a failure there cannot hold up the feeds, and they are
+  // fetched on every run: starring is deliberate.
+  if (config_.favoritesLimit != 0) {
+    report(SyncStage::Favorites, 0, 0, kFavoritesFolderName);
+    if (aborted_) {
+      outcome.status = SyncStatus::Aborted;
+      outcome.stats = stats_;
+      return outcome;
+    }
+    if (!fetchFavorites(request, outcome)) {
+      outcome.stats = stats_;
+      return outcome;
+    }
+  }
 
   // Marking items read upstream is best effort: articles are already on the
   // card and must not be lost because the token request failed.

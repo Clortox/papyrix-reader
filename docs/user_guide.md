@@ -722,6 +722,8 @@ Opening an article hands off to the reader, which returns to that article's fold
 
 Set `"includeRead": true` in `rss.json` to build a shelf of recent articles even when FreshRSS already reports them as read; by default only unread items are downloaded.
 
+Articles you star in FreshRSS are always downloaded, on every sync, into `/RSS/Favorites`. Set `"favoritesLimit": 0` to turn that off.
+
 With more subscribed feeds than the per-sync limit, each sync covers part of the list and the next continues where it stopped, so all feeds are reached over a few syncs. The menu shows which slice the last sync covered.
 
 Articles are ordinary `.html` files under `/RSS`, so they also appear in the file browser. The oldest articles are deleted after a sync once the per-feed limit is reached. Downloaded articles stay readable when WiFi is unavailable.

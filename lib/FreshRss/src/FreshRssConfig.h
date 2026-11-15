@@ -26,6 +26,7 @@ constexpr uint8_t kMinMaxFeeds = 1;
 constexpr uint8_t kMaxMaxFeeds = 64;
 constexpr uint16_t kMinSyncIntervalMinutes = 5;
 constexpr uint16_t kMaxSyncIntervalMinutes = 30 * 24 * 60;
+constexpr uint16_t kMaxFavoritesLimit = 200;
 constexpr uint16_t kMinKeepPerFeed = 1;
 constexpr uint16_t kMaxKeepPerFeed = 200;
 constexpr uint32_t kMinArticleBytes = 4096;
@@ -44,6 +45,10 @@ struct Config {
   uint8_t maxFeeds = 8;
   uint16_t syncIntervalMinutes = 60;
   uint16_t keepPerFeed = 40;
+  // Newest starred items fetched on every sync into their own folder. Starring
+  // is deliberate, so this ignores read state and the incremental window.
+  // 0 disables the favorites folder.
+  uint16_t favoritesLimit = 100;
   uint32_t maxArticleBytes = 96 * 1024;
   bool verifyTls = true;       // official roots; ignored when caCert is set
   bool markReadOnOpen = true;  // queue an upstream mark-as-read when an article opens

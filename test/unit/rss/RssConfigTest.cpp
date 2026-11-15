@@ -91,6 +91,7 @@ int main() {
           "maxFeeds": 3,
           "syncIntervalMinutes": 30,
           "keepPerFeed": 12,
+          "favoritesLimit": 25,
           "maxArticleBytes": 40000,
           "markReadOnOpen": false,
           "verifyTls": false,
@@ -108,6 +109,7 @@ int main() {
     runner.expectEq<uint8_t>(3, config.maxFeeds, "config: maxFeeds decoded");
     runner.expectEq<uint16_t>(30, config.syncIntervalMinutes, "config: sync interval decoded");
     runner.expectEq<uint16_t>(12, config.keepPerFeed, "config: keepPerFeed decoded");
+    runner.expectEq<uint16_t>(25, config.favoritesLimit, "config: favoritesLimit decoded");
     runner.expectEq<uint32_t>(40000, config.maxArticleBytes, "config: maxArticleBytes decoded");
     runner.expectFalse(config.markReadOnOpen, "config: markReadOnOpen decoded");
     runner.expectFalse(config.verifyTls, "config: verifyTls decoded");
@@ -158,7 +160,7 @@ int main() {
     std::string error;
     const Config config = parse(
         R"({"articlesPerFeed":900,"maxFeeds":99,"syncIntervalMinutes":1,"keepPerFeed":0,"maxArticleBytes":10,
-            "folder":"/"})",
+            "favoritesLimit":900,"folder":"/"})",
         ok, error);
     runner.expectTrue(ok, "config: out-of-range numbers still parse");
     runner.expectEq<uint16_t>(kMaxArticlesPerFeed, config.articlesPerFeed, "config: articlesPerFeed clamped high");
@@ -166,10 +168,22 @@ int main() {
     runner.expectEq<uint8_t>(64, kMaxMaxFeeds, "config: the cap covers a large subscription list");
     runner.expectEq<uint16_t>(kMinSyncIntervalMinutes, config.syncIntervalMinutes, "config: interval clamped low");
     runner.expectEq<uint16_t>(kMinKeepPerFeed, config.keepPerFeed, "config: keepPerFeed clamped low");
+    runner.expectEq<uint16_t>(kMaxFavoritesLimit, config.favoritesLimit, "config: favoritesLimit clamped high");
     runner.expectEq<uint32_t>(kMinArticleBytes, config.maxArticleBytes, "config: maxArticleBytes clamped low");
     runner.expectEqual("/RSS", config.folder, "config: card root refused as folder");
   }
   {
+    {
+      bool ok = false;
+      std::string error;
+      const Config config = parse(R"({"favoritesLimit":0})", ok, error);
+      runner.expectTrue(ok, "config: zero favorites limit parses");
+      runner.expectEq<uint16_t>(0, config.favoritesLimit, "config: zero favorites limit disables the folder");
+
+      const Config huge = parse(R"({"favoritesLimit":900})", ok, error);
+      runner.expectEq<uint16_t>(kMaxFavoritesLimit, huge.favoritesLimit, "config: favorites limit clamped high");
+    }
+
     Config config;
     char error[96] = {};
     runner.expectFalse(validateConfig(config, error, sizeof(error)), "validate: empty config rejected");

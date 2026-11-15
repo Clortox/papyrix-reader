@@ -320,6 +320,11 @@ class Parser {
       out.syncIntervalMinutes = clampU16(number, kMinSyncIntervalMinutes, kMaxSyncIntervalMinutes);
       return true;
     }
+    if (std::strcmp(key, "favoritesLimit") == 0) {
+      if (!requiredNumber(key, number)) return false;
+      out.favoritesLimit = clampU16(number, 0, kMaxFavoritesLimit);
+      return true;
+    }
     if (std::strcmp(key, "keepPerFeed") == 0) {
       if (!requiredNumber(key, number)) return false;
       out.keepPerFeed = clampU16(number, kMinKeepPerFeed, kMaxKeepPerFeed);
@@ -484,6 +489,7 @@ void normalizeConfig(Config& config) {
   if (config.maxFeeds > kMaxMaxFeeds) config.maxFeeds = kMaxMaxFeeds;
   if (config.syncIntervalMinutes < kMinSyncIntervalMinutes) config.syncIntervalMinutes = kMinSyncIntervalMinutes;
   if (config.syncIntervalMinutes > kMaxSyncIntervalMinutes) config.syncIntervalMinutes = kMaxSyncIntervalMinutes;
+  if (config.favoritesLimit > kMaxFavoritesLimit) config.favoritesLimit = kMaxFavoritesLimit;
   if (config.keepPerFeed < kMinKeepPerFeed) config.keepPerFeed = kMinKeepPerFeed;
   if (config.keepPerFeed > kMaxKeepPerFeed) config.keepPerFeed = kMaxKeepPerFeed;
   if (config.maxArticleBytes < kMinArticleBytes) config.maxArticleBytes = kMinArticleBytes;
@@ -582,6 +588,7 @@ size_t writeExampleConfig(char* out, size_t capacity) {
       "  \"maxFeeds\": 8,\n"
       "  \"syncIntervalMinutes\": 60,\n"
       "  \"keepPerFeed\": 40,\n"
+      "  \"favoritesLimit\": 100,\n"
       "  \"maxArticleBytes\": 98304,\n"
       "  \"markReadOnOpen\": true,\n"
       "  \"includeRead\": false,\n"

@@ -161,7 +161,11 @@ class ArticleStore {
   virtual uint64_t freeBytes() = 0;
 };
 
-enum class SyncStage { Connecting, Login, Feeds, Articles, MarkRead, Prune, Done };
+enum class SyncStage { Connecting, Login, Feeds, Articles, Favorites, MarkRead, Prune, Done };
+
+// Starred items are always downloaded, into a folder of their own.
+constexpr const char* kFavoritesFolderName = "Favorites";
+constexpr const char* kFavoritesApiPath = "/reader/api/0/stream/contents/user/-/state/com.google/starred";
 
 struct SyncProgress {
   SyncStage stage = SyncStage::Connecting;
@@ -295,6 +299,10 @@ class SyncSession {
   bool login(SyncOutcome& outcome);
   bool fetchSubscriptions(SyncOutcome& outcome);
   bool fetchFeed(const Feed& feed, size_t index, size_t total, const SyncRequest& request, SyncOutcome& outcome);
+  // Downloads the newest starred items, ignoring read state and the sync window.
+  bool fetchFavorites(const SyncRequest& request, SyncOutcome& outcome);
+  // Reads one feed's (or the favorites') response into the downloader.
+  bool streamDownload(ArticleDownloader& downloader, SyncOutcome& outcome);
   bool uploadMarkRead(const char* const* ids, size_t count, SyncOutcome& outcome);
   bool fetchToken(SyncOutcome& outcome);
   bool send(const char* method, const char* apiPath, const char* query, const char* authorization, const char* body,

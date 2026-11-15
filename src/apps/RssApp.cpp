@@ -212,6 +212,8 @@ const char* stageLabel(freshrss::SyncStage stage) {
       return "Reading feed list";
     case freshrss::SyncStage::Articles:
       return "Downloading articles";
+    case freshrss::SyncStage::Favorites:
+      return "Downloading favorites";
     case freshrss::SyncStage::MarkRead:
       return "Marking read";
     case freshrss::SyncStage::Prune:

@@ -49,6 +49,9 @@ Config makeConfig() {
   std::snprintf(config.folder, sizeof(config.folder), "/RSS");
   config.articlesPerFeed = 5;
   config.keepPerFeed = 2;
+  // Favorites are off for the general scripts so each one stays focused; the
+  // favorites tests turn them on.
+  config.favoritesLimit = 0;
   return config;
 }
 
@@ -397,6 +400,56 @@ int main() {
     const SyncOutcome outcome = fixture.run();
     runner.expectTrue(outcome.ok(), "reconnect: sync completes after a dropped connection");
     runner.expectTrue(fixture.transport.connectLog.size() >= 2, "reconnect: connection re-established");
+  }
+
+  // --- favorites ------------------------------------------------------------
+  {
+    Fixture fixture;
+    fixture.config.favoritesLimit = 100;
+    fixture.transport.queue(freshrss_test::loginResponse());
+    fixture.transport.queue(freshrss_test::httpResponse(200, freshrss_test::subscriptionsBody()));
+    fixture.transport.queue(freshrss_test::httpResponse(200, itemContent("tag:f/1", "Feed item", "<p>a</p>")));
+    fixture.transport.queue(freshrss_test::httpResponse(200, itemContent("tag:f/2", "Feed item", "<p>b</p>")));
+    fixture.transport.queue(freshrss_test::httpResponse(200, itemContent("tag:s/1", "Starred item", "<p>star</p>")));
+    const SyncOutcome outcome = fixture.run();
+
+    runner.expectTrue(outcome.ok(), "favorites: sync completes");
+    const size_t at = fixture.transport.requests.find("state/com.google/starred");
+    runner.expectTrue(at != std::string::npos, "favorites: starred stream requested");
+    if (at != std::string::npos) {
+      const size_t end = fixture.transport.requests.find("\r\n", at);
+      const std::string line = fixture.transport.requests.substr(at, end - at);
+      runner.expectTrue(line.find("xt=") == std::string::npos, "favorites: read state not filtered");
+      runner.expectTrue(line.find("ot=") == std::string::npos, "favorites: sync window not applied");
+      runner.expectTrue(line.find("n=100") != std::string::npos, "favorites: configured limit sent");
+    }
+
+    const std::string directory = feedDirectory("Favorites");
+    const std::string name = expectedName("tag:s/1", "Starred item", 1700000000u);
+    runner.expectEq<size_t>(1, fixture.store.files.count(directory + "/" + name),
+                            "favorites: stored in their own folder");
+    if (fixture.store.files.count(directory + "/" + name)) {
+      const std::string& document = fixture.store.files.at(directory + "/" + name);
+      runner.expectTrue(document.find("Starred item - Favorites") != std::string::npos,
+                        "favorites: byline names the folder");
+      runner.expectTrue(document.find("<p>star</p>") != std::string::npos, "favorites: body stored");
+    }
+    runner.expectEq<size_t>(3, fixture.store.files.size(), "favorites: feeds plus favorite stored");
+  }
+  {
+    // A limit of zero turns the folder off entirely.
+    Fixture fixture;
+    runner.expectEq<uint16_t>(0, fixture.config.favoritesLimit, "favorites: off in the general fixture");
+    fixture.transport.queue(freshrss_test::loginResponse());
+    fixture.transport.queue(freshrss_test::httpResponse(200, freshrss_test::subscriptionsBody()));
+    for (int i = 0; i < 2; ++i)
+      fixture.transport.queue(
+          freshrss_test::httpResponse(200, itemContent("tag:d/" + std::to_string(i), "T", "<p>b</p>")));
+    const SyncOutcome outcome = fixture.run();
+    runner.expectTrue(outcome.ok(), "favorites: disabled sync completes");
+    runner.expectTrue(fixture.transport.requests.find("starred") == std::string::npos,
+                      "favorites: disabled means no request");
+    runner.expectEq<size_t>(2, fixture.store.files.size(), "favorites: nothing extra stored");
   }
 
   // --- round robin over the subscription list -------------------------------
