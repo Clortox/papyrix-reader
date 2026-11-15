@@ -1,4 +1,5 @@
 .pio
+.pi/
 .idea
 .DS_Store
 .vscode
