@@ -1,0 +1,11 @@
+{
+  "name": "Zotero",
+  "version": "1.0.0",
+  "description": "Zotero library reader core (config, item parsing, web snapshot download, offline article files)",
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"],
+  "build": {
+    "srcDir": "src",
+    "includeDir": "src"
+  }
+}
