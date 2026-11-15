@@ -159,15 +159,16 @@ bool HostTransport::perform() {
       return copy;
     }();
     // curl owns the connection and the body length.
-    if (lower.rfind("host:", 0) == 0 || lower.rfind("connection:", 0) == 0 ||
-        lower.rfind("content-length:", 0) == 0)
+    if (lower.rfind("host:", 0) == 0 || lower.rfind("connection:", 0) == 0 || lower.rfind("content-length:", 0) == 0)
       continue;
     headers = curl_slist_append(headers, line.c_str());
   }
 
   std::string url = tls_ ? "https://" : "http://";
-  if (host_.find(':') != std::string::npos) url += "[" + host_ + "]";
-  else url += host_;
+  if (host_.find(':') != std::string::npos)
+    url += "[" + host_ + "]";
+  else
+    url += host_;
   const bool defaultPort = (tls_ && port_ == 443) || (!tls_ && port_ == 80);
   if (!defaultPort) url += ":" + std::to_string(port_);
   url += target;

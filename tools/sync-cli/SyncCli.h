@@ -29,8 +29,7 @@ class HostTransport : public freshrss::Transport {
   HostTransport() = default;
   ~HostTransport() override;
 
-  bool connect(const char* host, uint16_t port, bool tls, bool verify, const char* caPath,
-               uint32_t timeoutMs) override;
+  bool connect(const char* host, uint16_t port, bool tls, bool verify, const char* caPath, uint32_t timeoutMs) override;
   void close() override;
   bool isConnected() override;
   int read(char* out, size_t capacity) override;

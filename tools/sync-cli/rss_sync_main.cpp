@@ -3,8 +3,6 @@
 // It runs the same sync code as the device, so the files it writes are the ones
 // the reader expects and a later on-device sync skips everything by file name.
 
-#include "SyncCli.h"
-
 #include <RssState.h>
 
 #include <cstdio>
@@ -13,6 +11,8 @@
 #include <ctime>
 #include <filesystem>
 #include <string>
+
+#include "SyncCli.h"
 
 using papyrix::rss_app::RssState;
 
@@ -143,8 +143,8 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  std::printf("rss-sync: %s@%s%s -> %s%s\n", config.user, endpoint.host, endpoint.basePath,
-              root.c_str(), config.folder);
+  std::printf("rss-sync: %s@%s%s -> %s%s\n", config.user, endpoint.host, endpoint.basePath, root.c_str(),
+              config.folder);
   std::printf("  %u feeds max, %u articles per feed, keeping %u\n", config.maxFeeds, config.articlesPerFeed,
               config.keepPerFeed);
   if (dryRun) std::printf("  dry run: nothing will be written\n");

@@ -147,7 +147,7 @@ bool HttpSession::request(const HttpRequest& request, HttpResponseHead& head, ch
     }
   }
   static const char kCommonHeaders[] =
-      "User-Agent: PapyriX-RSS\r\nAccept: application/json\r\nAccept-Encoding: identity\r\n";
+      "User-Agent: PapyriX-Sync\r\nAccept: application/json\r\nAccept-Encoding: identity\r\n";
   if (!transport_.write(kCommonHeaders, sizeof(kCommonHeaders) - 1)) {
     setError("send failed");
     if (errorSize > 0) copyBounded(error, errorSize, error_);
@@ -246,12 +246,24 @@ bool HttpSession::request(const HttpRequest& request, HttpResponseHead& head, ch
       if (headerContainsToken(value, "chunked")) head_.chunked = true;
     } else if (equalsIgnoreCase(name, "connection")) {
       if (headerContainsToken(value, "close")) keepAlive = false;
+    } else if (equalsIgnoreCase(name, "content-type")) {
+      copyBounded(head_.contentType, sizeof(head_.contentType), value, std::strlen(value));
+    } else if (equalsIgnoreCase(name, "location")) {
+      copyBounded(head_.location, sizeof(head_.location), value, std::strlen(value));
+    } else if (equalsIgnoreCase(name, "last-modified-version")) {
+      long long version = 0;
+      bool digits = false;
+      for (const char* p = value; *p >= '0' && *p <= '9'; ++p) {
+        version = version * 10 + (*p - '0');
+        digits = true;
+        if (version > 100000000000LL) break;
+      }
+      if (digits) head_.lastModifiedVersion = version;
     }
   }
 
   head_.keepAlive = keepAlive && request.keepAlive;
   head_.valid = true;
-  head_ = head_;
   head = head_;
 
   if (isNoBodyStatus(status)) {

@@ -46,6 +46,12 @@ struct HttpResponseHead {
   bool chunked = false;
   bool keepAlive = false;
   bool valid = false;
+  // Captured because clients need them: `location` to follow an attachment
+  // redirect, `lastModifiedVersion` for Zotero's incremental sync bookkeeping.
+  char location[256] = {};
+  long long lastModifiedVersion = -1;
+  // Used to tell a readable page from a binary attachment.
+  char contentType[64] = {};
 };
 
 // Writes requests and decodes responses on one connection. A response is read in

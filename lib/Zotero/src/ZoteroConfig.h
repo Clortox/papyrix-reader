@@ -10,14 +10,14 @@
 namespace zotero {
 
 constexpr size_t kMaxApiKey = 63;
-constexpr size_t kMaxLibrary = 47;    // "users/1234567" or "groups/12345"
+constexpr size_t kMaxLibrary = 47;  // "users/1234567" or "groups/12345"
 constexpr size_t kMaxFolder = 95;
 constexpr size_t kMaxCollection = 31;  // optional collection key filter
 constexpr size_t kMaxTag = 63;         // optional tag filter
 constexpr size_t kMaxCaPath = 95;
 
 constexpr uint16_t kMinItemsLimit = 1;
-constexpr uint16_t kMaxItemsLimit = 100;  // the API caps one page at 100
+constexpr uint16_t kMaxItemsLimit = 24;  // one run covers the newest N items
 constexpr uint16_t kMinKeepPerCollection = 1;
 constexpr uint16_t kMaxKeepPerCollection = 500;
 constexpr uint16_t kMinSyncIntervalMinutes = 5;
@@ -27,7 +27,7 @@ constexpr uint32_t kMaxItemBytesLimit = 512 * 1024;
 constexpr size_t kMaxConfigBytes = 4096;
 
 struct Config {
-  char apiKey[kMaxApiKey + 1] = {0};        // a personal Zotero API key
+  char apiKey[kMaxApiKey + 1] = {0};  // a personal Zotero API key
   // Library prefix as used by the API: "users/<userID>" or "groups/<groupID>".
   // A bare number is accepted and read as a user id.
   char library[kMaxLibrary + 1] = {0};
@@ -36,7 +36,7 @@ struct Config {
   char tag[kMaxTag + 1] = {0};                // optional: only items with this tag
   char caCert[kMaxCaPath + 1] = {0};          // optional PEM for private proxies
 
-  uint16_t itemsLimit = 50;  // newest top-level items per sync
+  uint16_t itemsLimit = 16;  // newest top-level items per sync
   uint16_t keepPerCollection = 40;
   uint32_t maxItemBytes = 256 * 1024;
   uint16_t syncIntervalMinutes = 60;

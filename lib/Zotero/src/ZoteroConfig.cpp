@@ -171,9 +171,8 @@ class Parser {
         out_.maxItemBytes = static_cast<uint32_t>(value);
       return true;
     }
-    if (std::strcmp(key_, "apiKey") == 0 || std::strcmp(key_, "library") == 0 ||
-        std::strcmp(key_, "folder") == 0 || std::strcmp(key_, "collection") == 0 || std::strcmp(key_, "tag") == 0 ||
-        std::strcmp(key_, "caCert") == 0)
+    if (std::strcmp(key_, "apiKey") == 0 || std::strcmp(key_, "library") == 0 || std::strcmp(key_, "folder") == 0 ||
+        std::strcmp(key_, "collection") == 0 || std::strcmp(key_, "tag") == 0 || std::strcmp(key_, "caCert") == 0)
       return typeError("a string");
     if (isBooleanKey()) return typeError("true or false");
     return true;
@@ -301,10 +300,8 @@ void normalizeConfig(Config& config) {
   if (config.itemsLimit > kMaxItemsLimit) config.itemsLimit = kMaxItemsLimit;
   if (config.keepPerCollection < kMinKeepPerCollection) config.keepPerCollection = kMinKeepPerCollection;
   if (config.keepPerCollection > kMaxKeepPerCollection) config.keepPerCollection = kMaxKeepPerCollection;
-  if (config.syncIntervalMinutes < kMinSyncIntervalMinutes)
-    config.syncIntervalMinutes = kMinSyncIntervalMinutes;
-  if (config.syncIntervalMinutes > kMaxSyncIntervalMinutes)
-    config.syncIntervalMinutes = kMaxSyncIntervalMinutes;
+  if (config.syncIntervalMinutes < kMinSyncIntervalMinutes) config.syncIntervalMinutes = kMinSyncIntervalMinutes;
+  if (config.syncIntervalMinutes > kMaxSyncIntervalMinutes) config.syncIntervalMinutes = kMaxSyncIntervalMinutes;
   if (config.maxItemBytes < kMinItemBytes) config.maxItemBytes = kMinItemBytes;
   if (config.maxItemBytes > kMaxItemBytesLimit) config.maxItemBytes = kMaxItemBytesLimit;
 }
@@ -362,7 +359,7 @@ size_t writeExampleConfig(char* out, size_t capacity) {
       "  \"folder\": \"/Zotero\",\n"
       "  \"collection\": \"\",\n"
       "  \"tag\": \"\",\n"
-      "  \"itemsLimit\": 50,\n"
+      "  \"itemsLimit\": 16,\n"
       "  \"keepPerCollection\": 40,\n"
       "  \"syncIntervalMinutes\": 60,\n"
       "  \"maxItemBytes\": 262144,\n"

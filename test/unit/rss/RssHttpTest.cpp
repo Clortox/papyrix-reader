@@ -86,7 +86,7 @@ int main() {
     const std::string expected =
         "POST /api/greader.php/accounts/ClientLogin HTTP/1.1\r\n"
         "Host: example.net\r\n"
-        "User-Agent: PapyriX-RSS\r\nAccept: application/json\r\nAccept-Encoding: identity\r\n"
+        "User-Agent: PapyriX-Sync\r\nAccept: application/json\r\nAccept-Encoding: identity\r\n"
         "Connection: keep-alive\r\n"
         "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: 25\r\n"
         "\r\n"

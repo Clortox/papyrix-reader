@@ -20,17 +20,17 @@ struct ItemInfo {
   char key[12] = {};  // 8-character Zotero key
   char itemType[24] = {};
   char title[192] = {};
-  char creators[160] = {};   // joined "A; B" (creatorSummary or first/last names)
+  char creators[160] = {};  // joined "A; B" (creatorSummary or first/last names)
   char date[32] = {};
   char url[256] = {};
   char abstractNote[400] = {};
-  char collection[12] = {};  // first collection key, empty when unfiled
-  char tags[120] = {};       // up to a few tags, joined
+  char collection[12] = {};   // first collection key, empty when unfiled
+  char tags[120] = {};        // up to a few tags, joined
   char contentType[40] = {};  // attachments: "text/html", "application/pdf", ...
   char filename[128] = {};    // attachments: stored file name
   char linkMode[24] = {};     // attachments: imported_url, linked_url, ...
   char parentItem[12] = {};
-  char note[600] = {};       // notes: the HTML body, truncated
+  char note[600] = {};  // notes: the HTML body, truncated
   uint32_t version = 0;
   uint16_t numChildren = 0;
 
@@ -43,7 +43,8 @@ struct ItemInfo {
 };
 
 struct ItemList {
-  static constexpr size_t kMaxItems = 64;
+  // Bounded so a list can live in the sync session rather than on the stack.
+  static constexpr size_t kMaxItems = 24;
   ItemInfo items[kMaxItems];
   size_t count = 0;
 };
