@@ -114,6 +114,7 @@ See [Customization](docs/customization.md), [sleep screens](docs/user_guide.md#3
 - [Go 9×9](docs/user_guide.md#313-go) against an offline opponent, with button and touch controls
 - [Lights Out](docs/user_guide.md#314-lights-out) with solvable 5 by 5 boards, button and touch controls, and saved games
 - [Sokoban](docs/user_guide.md#315-sokoban) with 12 built-in levels, undo, button and touch controls, and saved games
+- [RSS Reader](docs/rss.md) with offline articles from a FreshRSS server, read with the built-in reader
 
 The [Apps menu](docs/user_guide.md#apps) groups file transfer, common apps, and games.
 

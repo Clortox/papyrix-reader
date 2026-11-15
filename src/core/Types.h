@@ -58,6 +58,7 @@ enum class SyncMode : uint8_t {
   NtpSync,
   PrinterSetup,
   LocalsendSetup,
+  RssSetup,
 };
 
 // Common buffer sizes

@@ -1,0 +1,11 @@
+{
+  "name": "FreshRss",
+  "version": "1.0.0",
+  "description": "FreshRSS Google Reader API client core (config, streaming JSON, HTTP framing, offline article files, sync orchestration)",
+  "frameworks": ["arduino", "espidf"],
+  "platforms": ["espressif32"],
+  "build": {
+    "srcDir": "src",
+    "includeDir": "src"
+  }
+}

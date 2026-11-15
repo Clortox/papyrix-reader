@@ -155,7 +155,7 @@ StateTransition AppLauncherState::update(Core& core) {
     return StateTransition::to(StateId::Network);
   }
   if (core.pendingSync == SyncMode::NtpSync || core.pendingSync == SyncMode::PrinterSetup ||
-      core.pendingSync == SyncMode::LocalsendSetup) {
+      core.pendingSync == SyncMode::LocalsendSetup || core.pendingSync == SyncMode::RssSetup) {
     return StateTransition::to(StateId::Network);
   }
   if (goNetwork_) {

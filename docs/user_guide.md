@@ -95,7 +95,7 @@ Four buttons at the bottom of the screen:
 Apps lists three groups in this order:
 
 1. File transfer: **WiFi Transfer**, **Calibre Sync**, **LocalSend**, **Printer**.
-2. Common apps: **Image Viewer**, **Pomodoro**, **Clock**.
+2. Common apps: **Image Viewer**, **Pomodoro**, **Clock**, **RSS Reader**.
 3. Games: **2048**, **Go**, **Lights Out**, **Sokoban**.
 
 Two dashed lines separate the groups. Direction buttons select apps, not separator lines. Taps on the separator lines do nothing.
@@ -702,6 +702,33 @@ The device saves the current level, position, move count, push count, and up to 
 Sokoban uses the configured Auto Sleep timeout. If saving fails, **Retry** completes the requested exit or sleep. **Cancel** retains the current game. **Discard changes** leaves without saving the latest moves. An unreadable save stays unchanged until you confirm its replacement.
 
 Sokoban requests fast screen refreshes, including on entry. The display driver can require a stronger refresh after startup or display recovery.
+
+### 3.16 RSS Reader
+
+Open **Apps → RSS Reader**. It downloads unread articles from a FreshRSS server and stores them on the SD card, so they can be read offline with the normal reader. See the [RSS guide](rss.md) for the configuration file and the API requirements.
+
+The app needs a `rss.json` file on the SD card with the server address, your user name, and the **API password** from FreshRSS. When the file is missing, press **Create** to write a template, then edit it with the [web server](webserver.md) or on a computer.
+
+| Screen | Buttons |
+|---|---|
+| Feeds | Up/Down select a feed, Right opens it, Left syncs, Back leaves the app |
+| Articles | Up/Down select an article, Right opens it in the reader, Left syncs, Back returns to the feeds |
+| Sync | Back stops the transfer |
+| Menu | Up/Down select, Left/Right activates, Back closes |
+
+A sync starts when the app opens if the last one is older than the configured interval, and repeats on that interval while the app stays open. **Menu → Sync now** or the **Sync** button starts one immediately. **Menu → Reload config** re-reads `rss.json` after you edit it.
+
+Opening an article hands off to the reader, which returns to that article's folder, so the next article is one step away. When **markReadOnOpen** is set, the app marks the article read on the server at the next sync.
+
+Set `"includeRead": true` in `rss.json` to build a shelf of recent articles even when FreshRSS already reports them as read; by default only unread items are downloaded.
+
+Articles you star in FreshRSS are always downloaded, on every sync, into `/RSS/Favorites`. Set `"favoritesLimit": 0` to turn that off.
+
+With more subscribed feeds than the per-sync limit, each sync covers part of the list and the next continues where it stopped, so all feeds are reached over a few syncs. The menu shows which slice the last sync covered.
+
+Articles are ordinary `.html` files under `/RSS`, so they also appear in the file browser. The oldest articles are deleted after a sync once the per-feed limit is reached. Downloaded articles stay readable when WiFi is unavailable.
+
+The app uses the configured Auto Sleep timeout while the lists are open, and keeps the device awake during a transfer. If saving fails, the sync reports the reason on screen and the next run continues from the last successful one.
 
 ---
 

@@ -2007,6 +2007,20 @@ foreach(TEST_SRC ${TEST_SOURCES})
       ${TEST_HELPERS}
     )
     target_include_directories(${TEST_NAME} PRIVATE ${PROJECT_ROOT}/lib/Localsend/src)
+  elseif(TEST_NAME MATCHES "^Rss(Config|JsonStream|Http|Article|Sync|State)Test$")
+    # The FreshRSS core is Arduino-free, so every module runs on the host. Each
+    # test links the whole core: the modules share the scanner and text helpers.
+    add_executable(${TEST_NAME}
+      ${TEST_SRC}
+      ${PROJECT_ROOT}/lib/FreshRss/src/FreshRssConfig.cpp
+      ${PROJECT_ROOT}/lib/FreshRss/src/FreshRssJson.cpp
+      ${PROJECT_ROOT}/lib/FreshRss/src/FreshRssHttp.cpp
+      ${PROJECT_ROOT}/lib/FreshRss/src/FreshRssArticle.cpp
+      ${PROJECT_ROOT}/lib/FreshRss/src/FreshRssSync.cpp
+      ${PROJECT_ROOT}/src/apps/RssState.cpp
+      ${TEST_HELPERS}
+    )
+    target_include_directories(${TEST_NAME} PRIVATE ${PROJECT_ROOT}/lib/FreshRss/src)
   elseif(TEST_NAME STREQUAL "IppTest")
     add_executable(${TEST_NAME}
       ${TEST_SRC}
