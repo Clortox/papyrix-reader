@@ -887,6 +887,17 @@ void NetworkState::handleConnecting(Core& core, Button button) {
           return;
         }
 
+        if (core.pendingSync == SyncMode::RssSetup) {
+          if (!WIFI_STORE.hasSavedCredential(selectedSSID_) && passwordJustEntered_) {
+            if (WIFI_STORE.addCredential(selectedSSID_, keyboardView_.input))
+              WIFI_STORE.promoteCredential(selectedSSID_);
+          }
+          memset(keyboardView_.input, 0, sizeof(keyboardView_.input));
+          keyboardView_.inputLen = 0;
+          goApp_ = true;
+          return;
+        }
+
         if (!WIFI_STORE.hasSavedCredential(selectedSSID_) && passwordJustEntered_) {
           confirmView_.setTitle(tr(SAVE_PASSWORD_Q));
           confirmView_.setMessage(tr(SAVE_PASSWORD_MSG));
@@ -935,6 +946,8 @@ void NetworkState::handleSavePrompt(Core& core, Button button) {
         goApp_ = true;
       } else if (core.pendingSync == SyncMode::LocalsendSetup) {
         goApp_ = true;
+      } else if (core.pendingSync == SyncMode::RssSetup) {
+        goApp_ = true;
       } else {
         startWebServer(core);
       }
@@ -946,6 +959,8 @@ void NetworkState::handleSavePrompt(Core& core, Button button) {
       } else if (core.pendingSync == SyncMode::PrinterSetup) {
         goApp_ = true;
       } else if (core.pendingSync == SyncMode::LocalsendSetup) {
+        goApp_ = true;
+      } else if (core.pendingSync == SyncMode::RssSetup) {
         goApp_ = true;
       } else {
         startWebServer(core);
@@ -1071,6 +1086,11 @@ void NetworkState::startHotspot(Core& core) {
     }
     if (core.pendingSync == SyncMode::LocalsendSetup) {
       // The LocalSend app serves on the AP itself.
+      goApp_ = true;
+      return;
+    }
+    if (core.pendingSync == SyncMode::RssSetup) {
+      // Hotspot mode cannot reach the FreshRSS server; the app reports that.
       goApp_ = true;
       return;
     }

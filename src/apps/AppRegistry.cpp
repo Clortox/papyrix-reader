@@ -7,6 +7,7 @@
 #include "MiniApp.h"
 #include "PomodoroApp.h"
 #include "PrinterApp.h"
+#include "RssApp.h"
 #include "SokobanApp.h"
 
 namespace papyrix {
@@ -30,6 +31,10 @@ const MiniApp APPS[] = {
      lightsout_app::exit, lightsout_app::prepareExit, false, true},
     {"Sokoban", sokoban_app::enter, sokoban_app::update, sokoban_app::handleEvent, sokoban_app::render,
      sokoban_app::exit, sokoban_app::prepareExit, false, true},
+    // Offline RSS: browsing stays responsive while a sync runs, and the device
+    // may still auto-sleep while the lists are open.
+    {"RSS Reader", rss_app::enter, rss_app::update, rss_app::handleEvent, rss_app::render, rss_app::exitApp,
+     rss_app::prepareExit, false, true},
 };
 const uint8_t APP_COUNT = sizeof(APPS) / sizeof(APPS[0]);
 const int8_t APP_IMAGEVIEWER = 0;
@@ -41,5 +46,6 @@ const int8_t APP_2048 = 5;
 const int8_t APP_GO = 6;
 const int8_t APP_LIGHTS_OUT = 7;
 const int8_t APP_SOKOBAN = 8;
+const int8_t APP_RSS = 9;
 
 }  // namespace papyrix

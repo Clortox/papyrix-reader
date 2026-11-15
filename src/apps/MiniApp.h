@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MiniApps.h>
+#include "../../lib/MiniApps/src/MiniApps.h"
 
 #include <cstdint>
 
@@ -23,5 +23,6 @@ extern const int8_t APP_2048;
 extern const int8_t APP_GO;
 extern const int8_t APP_LIGHTS_OUT;
 extern const int8_t APP_SOKOBAN;
+extern const int8_t APP_RSS;
 
 }  // namespace papyrix

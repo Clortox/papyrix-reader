@@ -19,7 +19,7 @@ void render(const GfxRenderer& r, const Theme& t, const AppMenuView& v, const pa
   const int width = r.getScreenWidth() - 2 * left;
   for (int i = 0; i < v.itemCount && rowHeight > 0; i++) {
     const int y = AppMenuView::rowY(i, rowHeight);
-    if (i == 4 || i == 7) {
+    if (i == 4 || i == 8) {
       const int separatorY = y - AppMenuView::GROUP_GAP / 2;
       const int end = r.getScreenWidth() - t.screenMarginSide;
       for (int x = t.screenMarginSide; x < end; x += 7) {

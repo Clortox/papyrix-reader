@@ -21,16 +21,18 @@ struct AppMenuView {
   static constexpr int EXTRA_COUNT = 2;
   static constexpr int GROUP_GAP = 8;
 
+  // Groups: file transfer (0-3), common apps (4-7), games (8+). The two extra
+  // entries are WiFi Transfer and Calibre Sync.
   static int rowY(int index, int rowHeight) {
     int y = LIST_START_Y + index * rowHeight;
     if (index >= 4) y += GROUP_GAP;
-    if (index >= 7) y += GROUP_GAP;
+    if (index >= 8) y += GROUP_GAP;
     return y;
   }
 
   int rowPitch(int screenHeight, int requestedPitch) const {
     if (itemCount <= 0 || requestedPitch <= 0) return 0;
-    const int gaps = (itemCount > 4 ? GROUP_GAP : 0) + (itemCount > 7 ? GROUP_GAP : 0);
+    const int gaps = (itemCount > 4 ? GROUP_GAP : 0) + (itemCount > 8 ? GROUP_GAP : 0);
     const int available = screenHeight - 50 - LIST_START_Y - gaps;
     if (available <= 0) return 0;
     const int limit = available / itemCount;
@@ -72,8 +74,9 @@ struct AppMenuView {
 
 inline int appIdForMenuItem(int index) {
   static const int8_t order[] = {papyrix::APP_LOCALSEND, papyrix::APP_PRINTER,    papyrix::APP_IMAGEVIEWER,
-                                 papyrix::APP_POMODORO,  papyrix::APP_CLOCK,      papyrix::APP_2048,
-                                 papyrix::APP_GO,        papyrix::APP_LIGHTS_OUT, papyrix::APP_SOKOBAN};
+                                 papyrix::APP_POMODORO,  papyrix::APP_CLOCK,      papyrix::APP_RSS,
+                                 papyrix::APP_2048,      papyrix::APP_GO,         papyrix::APP_LIGHTS_OUT,
+                                 papyrix::APP_SOKOBAN};
   return order[index - AppMenuView::EXTRA_COUNT];
 }
 

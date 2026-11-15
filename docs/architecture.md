@@ -130,6 +130,10 @@ Clock keeps board-specific standby and recovery in the firmware. After hardware 
 
 `Sokoban` provides 12 original levels in constant storage. It bounds boards to 12 by 12 cells and eight boxes. A fixed circular buffer retains 128 undo moves. `SokobanStore` saves the current position, counters, and undo history on exit or sleep. Loading checks the position and reverses the active history before it accepts a record.
 
+`FreshRss` in `lib/` is the RSS reader core: configuration decoding, a streaming JSON scanner, HTTP/1.1 framing, the offline article writer with its HTML sanitizer, and sync orchestration. It has no Arduino or SD dependency, so it runs in the host test harness. `RssApp` binds it to the mini-app host, `RssTransport` provides plain or TLS sockets, and the SD article store writes articles as `.html` files in the configured folder. The app is registered as `APP_RSS` and appears in the common-apps group.
+
+Articles are ordinary library files, so opening one uses the existing reader transition. A sync keeps one connection, streams each response through a fixed token buffer, and never holds a whole article in RAM. Read markers queue in `/.papyrix/apps/rss.txt` and are uploaded on a later sync.
+
 ## Background Work
 
 `lib/AsyncTask` provides cooperative cancellation and scoped mutex handling. Background tasks stop themselves. Do not force-delete a task. Stop the cache task before the main thread accesses its parser or page cache. Do not hold a mutex during file I/O or other blocking work.
@@ -147,6 +151,8 @@ Firmware updates validate a PapyriX board tag before flash erase when one is pre
 `IppTransport` is the port point between the firmware WiFi client and the host test harness. `src/apps/PrinterApp.cpp` owns the WiFi session, the mDNS advertisement, and the printout queue on the SD card. `lib/FsHelpers` keeps the bounded newest-64 printout queue sorted in natural order.
 
 `lib/Localsend` is the LocalSend receive core. The app saves received files to `/received`.
+
+`lib/FreshRss` speaks the FreshRSS Google Reader compatible API. The app signs in with the account's API password, reads `subscription/list`, fetches unread items with `stream/contents/feed/<id>` bounded by `n` and `ot`, and uploads `edit-tag` requests for articles opened on the device. `WifiTransport` uses `WiFiClient` for `http://` servers and `WiFiClientSecure` for `https://`, validating against the built-in root bundle, a PEM file named in the config, or no validation when the config asks for it. A TLS session is refused when free heap is below the session budget, and the reason is shown on screen.
 
 See the [web server guide](webserver.md), the [Calibre guide](calibre.md), the [printer guide](printer.md), and the [LocalSend guide](localsend.md).
 
